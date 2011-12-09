@@ -12,6 +12,7 @@
 
 #include "tcplib.h"
 #include "util.h"
+#include <sys/time.h>
 
 /************************** Function prototypes ****************************/
 
@@ -63,6 +64,8 @@ int main(int argc, char *argv[])
     struct SYSInfo * sysinfo = NULL;       // System (CPU/Interrupts) information
     struct SYSInfo * serverinfo = NULL;    // Server's system information
     struct PROInfo proinfo;                // Process information
+    struct timeval tv;                     // Timestamp
+    double ts;
  
     /**************** At least given server name ***************************/
 
@@ -325,7 +328,7 @@ int main(int argc, char *argv[])
 	    fprintf(output, "# Message size (Bytes): %lld\n", messageSize);
 	    fprintf(output, "# Iteration: %d\n# Test Repetition: %d\n\n", iteration, setting.repeat);
 	    fprintf(output, "#        Network      Client     C-process   C-process      Server     S-process   S-process\n");
-	    fprintf(output, "#      Throughput  Elapsed-time  User-mode  System-mode  Elapsed-time  User-mode  System-mode\n");
+	    fprintf(output, "#      Throughput  Elapsed-time  User-mode  System-mode  Elapsed-time  User-mode  System-mode    Timestamp\n");
 	    fprintf(output, "#         (Mbps)    (Seconds)    (Seconds)   (Seconds)    (Seconds)    (Seconds)   (Seconds)\n");
       	}
     }
@@ -432,17 +435,19 @@ int main(int argc, char *argv[])
 	
 	/***************** Write down the results to a file  ***************/
 	
+    gettimeofday(&tv, NULL);
+    ts = (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
 	if ( setting.exp_mode) {
 	    preSize = messageSize;
 	    preIteration = iteration;
 	    if ( setting.writeOption )
 		fprintf(output, "%10lld%15.4f%18.5f%11d\n",
 			messageSize, bandwidth, time_usec/1000000.0, iteration);
-	} else if ( setting.writeOption )
-	    fprintf(output, "%-4d%12.3f%12.2f%13.2f%12.2f%13.2f%13.2f%12.2f\n", i+1, bandwidth, 
-		    time_usec/1000000.0, (double)proinfo.utime_sec + proinfo.utime_usec/1000000.0,
-		    (double)proinfo.stime_sec + proinfo.stime_usec/1000000.0, s_rtime_usec/1000000.0,
-		     s_utime_usec/1000000.0,  s_stime_usec/1000000.0);
+	} else if ( setting.writeOption ) {
+	    fprintf(output, "%-4d%12.3f%12.2f%13.2f%12.2f%13.2f%13.2f%12.2f%17.2f\n", i+1, bandwidth, 
+		    time_usec/1000000.0, (double)proinfo.utime_sec + proinfo.utime_usec/1000000.0, (double)proinfo.stime_sec + proinfo.stime_usec/1000000.0,
+            s_rtime_usec/1000000.0, s_utime_usec/1000000.0, s_stime_usec/1000000.0, ts);
+    }
 
     } // end of for loop of setting.repeat 
 

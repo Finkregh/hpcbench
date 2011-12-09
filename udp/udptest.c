@@ -11,6 +11,7 @@
 
 #include "udplib.h"
 #include "util.h"
+#include <sys/time.h>
 
 
 /****************************** Function prototype *************************/
@@ -59,6 +60,8 @@ int main(int argc, char *argv[])
     struct SYSInfo * sysinfo = NULL;              // System (CPU/Interrupts) information
     struct SYSInfo * serverinfo = NULL;           // Server's system information
     struct PROInfo * proinfo;                     // Process information
+    struct timeval tv;                            // Timestamp
+    double ts;
 
     /**************** At least given server name ***************************/
 
@@ -246,10 +249,10 @@ int main(int argc, char *argv[])
 	    fprintf(output, "# Test time (second): %f\n\n", setting.testTime);
 	    if ( !setting.bidirection ) { 
 		fprintf(output, "#   Size    Network     Local    Client      Client    Server      Server    Server  ServerRecv\n");
-		fprintf(output, "#  (Byte)    (Mbps)    (Mbps)   SentPkg    SentByte   RecvPkg    RecvByte   LostPkg    LossRate\n");
+		fprintf(output, "#  (Byte)    (Mbps)    (Mbps)   SentPkg    SentByte   RecvPkg    RecvByte   LostPkg    LossRate  Timestamp\n");
 	    } else {
 		fprintf(output, "#   Size    Network     Local    Client      Client    Server      Server    Client      Client    Server      Server  ServerRecv\n");
-		fprintf(output, "#  (Byte)    (Mbps)    (Mbps)   SentPkg    SentByte   RecvPkg    RecvByte   RecvPkg    RecvByte   SentPkg    SentByte    LossRate\n");
+		fprintf(output, "#  (Byte)    (Mbps)    (Mbps)   SentPkg    SentByte   RecvPkg    RecvByte   RecvPkg    RecvByte   SentPkg    SentByte    LossRate  Timestamp\n");
 	    }
 	}
 	else { // Fixed packet size test
@@ -258,10 +261,10 @@ int main(int argc, char *argv[])
 	    fprintf(output, "# Test time (Second): %f\n# Test repeat: %d\n\n", setting.testTime, setting.repeat); 
 
 	    if ( ! setting.bidirection ) // One way unidirectional test
-		fprintf(output, "#   Network(Mbps) Local(Mbps) SentPkg(C) SentByte(C) RecvPkg(S) RecvByte(S)  LostPkg  LossRate\n");
+		fprintf(output, "#   Network(Mbps) Local(Mbps) SentPkg(C) SentByte(C) RecvPkg(S) RecvByte(S)  LostPkg  LossRate Timestamp\n");
 	    else { // bidirection test 
 		fprintf(output, "#     Network     Local    Client     Client    Server     Server    Client     Client    Server     Server   Server\n");
-		fprintf(output, "#   throughput throughput   sent       sent      recv       recv      recv       recv      sent       sent     recv\n");
+		fprintf(output, "#   throughput throughput   sent       sent      recv       recv      recv       recv      sent       sent     recv     Timestamp\n");
 		fprintf(output, "#     (Mbps)     (Mbps)    packet      byte     packet      byte     packet      byte     packet      byte   loss-rate\n");
 	    } // bidriection test
 	} // Fixed packet size test
@@ -419,28 +422,30 @@ int main(int argc, char *argv[])
 	    
 	/*************** Store test results in the file ********************/
 
+    gettimeofday(&tv, NULL);
+    ts = (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
 	if ( setting.writeOption ) {
 	    if ( setting.exponential ) {     // exponential throughput test
 		if ( !setting.bidirection )
-		    fprintf (output, "%-3d%6d%10.3f%10.3f%10d%12lld%10d%12lld%10d%10.3f\n", 
+		    fprintf (output, "%-3d%6d%10.3f%10.3f%10d%12lld%10d%12lld%10d%10.3f%17.2f\n", 
 			 i+1, udpsock.dataSize, serverTP, clientTP, udpsock.sentPackets, 
 			 udpsock.sentBytes, server.recvPackets, server.recvBytes, 
-			 lossPackets, lossRate);
+			 lossPackets, lossRate, ts);
 		else
-		    fprintf (output, "%-3d%6d%10.3f%10.3f%10d%12lld%10d%12lld%10d%12lld%10d%12lld%12.3f\n", 
+		    fprintf (output, "%-3d%6d%10.3f%10.3f%10d%12lld%10d%12lld%10d%12lld%10d%12lld%12.3f%17.2f\n", 
 			 i+1, udpsock.dataSize, serverTP, clientTP, udpsock.sentPackets, 
 			 udpsock.sentBytes, server.recvPackets, server.recvBytes, udpsock.recvPackets, 
-			     udpsock.recvBytes, server.sentPackets, server.sentBytes, lossRate);
+			     udpsock.recvBytes, server.sentPackets, server.sentBytes, lossRate, ts);
 	    }
 	    else if ( !setting.bidirection )   // unidirectional throughput test 
-		fprintf (output, "%-3d%13.4f%12.4f%11d%12lld%11d%12lld%10d%10.3f\n", 
+		fprintf (output, "%-3d%13.4f%12.4f%11d%12lld%11d%12lld%10d%10.3f%17.2f\n", 
 			 i+1, serverTP, clientTP, udpsock.sentPackets, udpsock.sentBytes, 
-			 server.recvPackets, server.recvBytes, lossPackets, lossRate);
+			 server.recvPackets, server.recvBytes, lossPackets, lossRate, ts);
 	    else {                             // bidirectional throughput test 
 		fprintf(output, "%-3d%10.3f%11.3f%9d", i+1, serverTP, clientTP, udpsock.sentPackets);
 		fprintf(output, "%12lld%9d%12lld", udpsock.sentBytes, server.recvPackets, server.recvBytes);
 		fprintf(output, "%9d%12lld%9d", udpsock.recvPackets, udpsock.recvBytes, server.sentPackets);
-		fprintf(output, "%12lld%9.3f\n", server.sentBytes, lossRate);
+		fprintf(output, "%12lld%9.3f%17.2f\n", server.sentBytes, lossRate, ts);
 	    } // bidriection test
 	} // if write option
 
